@@ -1,28 +1,7 @@
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
-
-/**
- * @title ProofForge
- * @dev A decentralized document verification and timestamp system
- * @notice This contract allows users to create immutable proofs of document existence
- */
-contract ProofForge {
-    
-    struct Proof {
-        bytes32 documentHash;
-        address creator;
-        uint256 timestamp;
-        string description;
-        bool exists;
-    }
-    
-    // Mapping from document hash to Proof
+Mapping from document hash to Proof
     mapping(bytes32 => Proof) private proofs;
     
-    // Mapping from creator address to their document hashes
-    mapping(address => bytes32[]) private creatorDocuments;
-    
-    // Events
+    Events
     event ProofCreated(
         bytes32 indexed documentHash,
         address indexed creator,
@@ -103,3 +82,6 @@ contract ProofForge {
         return creatorDocuments[_creator].length;
     }
 }
+// 
+update
+// 
