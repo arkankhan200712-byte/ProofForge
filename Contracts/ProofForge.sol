@@ -1,87 +1,92 @@
-Mapping from document hash to Proof
-    mapping(bytes32 => Proof) private proofs;
-    
-    Events
-    event ProofCreated(
-        bytes32 indexed documentHash,
-        address indexed creator,
-        uint256 timestamp,
-        string description
-    );
-    
-    event ProofVerified(
-        bytes32 indexed documentHash,
-        address indexed verifier,
-        bool isValid
-    );
-    
-    /**
-     * @dev Creates a proof of document existence
-     * @param _documentHash The hash of the document to be registered
-     * @param _description A brief description of the document
-     * @notice The document hash must be unique and not previously registered
-     */
-    function createProof(bytes32 _documentHash, string memory _description) public {
-        require(_documentHash != bytes32(0), "Invalid document hash");
-        require(!proofs[_documentHash].exists, "Proof already exists");
-        require(bytes(_description).length > 0, "Description cannot be empty");
-        
-        Proof memory newProof = Proof({
-            documentHash: _documentHash,
-            creator: msg.sender,
-            timestamp: block.timestamp,
-            description: _description,
-            exists: true
-        });
-        
-        proofs[_documentHash] = newProof;
-        creatorDocuments[msg.sender].push(_documentHash);
-        
-        emit ProofCreated(_documentHash, msg.sender, block.timestamp, _description);
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.26;
+
+/**
+ * @title ProofForge
+ * @notice A decentralized platform for generating, storing, and validating tamper-proof
+ *         digital proofs of authenticity and origin for any data or document.
+ */
+contract Project {
+    address public admin;
+    uint256 public proofCount;
+
+    struct Proof {
+        uint256 id;
+        address creator;
+        string dataHash;
+        string description;
+        uint256 timestamp;
+        bool verified;
     }
-    
-    /**
-     * @dev Verifies if a document proof exists and returns its details
-     * @param _documentHash The hash of the document to verify
-     * @return exists Whether the proof exists
-     * @return creator Address of the proof creator
-     * @return timestamp When the proof was created
-     * @return description Description of the document
-     */
-    function verifyProof(bytes32 _documentHash) 
-        public 
-        returns (bool exists, address creator, uint256 timestamp, string memory description) 
-    {
-        Proof memory proof = proofs[_documentHash];
-        
-        emit ProofVerified(_documentHash, msg.sender, proof.exists);
-        
-        return (
-            proof.exists,
-            proof.creator,
-            proof.timestamp,
-            proof.description
-        );
+
+    mapping(uint256 => Proof) public proofs;
+
+    event ProofCreated(uint256 indexed id, address indexed creator, string dataHash, string description);
+    event ProofVerified(uint256 indexed id, address indexed verifier);
+    event AdminChanged(address indexed oldAdmin, address indexed newAdmin);
+
+    modifier onlyAdmin() {
+        require(msg.sender == admin, "Only admin allowed");
+        _;
     }
-    
-    /**
-     * @dev Retrieves all document hashes created by a specific address
-     * @param _creator The address of the creator
-     * @return An array of document hashes created by the address
-     */
-    function getCreatorDocuments(address _creator) public view returns (bytes32[] memory) {
-        return creatorDocuments[_creator];
+
+    modifier onlyCreator(uint256 _id) {
+        require(proofs[_id].creator == msg.sender, "Not proof creator");
+        _;
     }
-    
+
+    constructor() {
+        admin = msg.sender;
+    }
+
     /**
-     * @dev Returns the total number of proofs created by an address
-     * @param _creator The address to check
-     * @return The number of proofs created
+     * @notice Create a new digital proof with a hash and description
+     * @param _dataHash Unique hash representing the data/document
+     * @param _description Brief description of the proof
      */
-    function getProofCount(address _creator) public view returns (uint256) {
-        return creatorDocuments[_creator].length;
+    function createProof(string memory _dataHash, string memory _description) external {
+        require(bytes(_dataHash).length > 0, "Data hash required");
+        require(bytes(_description).length > 0, "Description required");
+
+        proofCount++;
+        proofs[proofCount] = Proof(proofCount, msg.sender, _dataHash, _description, block.timestamp, false);
+
+        emit ProofCreated(proofCount, msg.sender, _dataHash, _description);
+    }
+
+    /**
+     * @notice Verify a proof (admin only)
+     * @param _id Proof ID to be verified
+     */
+    function verifyProof(uint256 _id) external onlyAdmin {
+        require(_id > 0 && _id <= proofCount, "Invalid proof ID");
+        require(!proofs[_id].verified, "Proof already verified");
+
+        proofs[_id].verified = true;
+
+        emit ProofVerified(_id, msg.sender);
+    }
+
+    /**
+     * @notice Change the contract administrator
+     * @param _newAdmin Address of the new admin
+     */
+    function changeAdmin(address _newAdmin) external onlyAdmin {
+        require(_newAdmin != address(0), "Invalid admin address");
+
+        address oldAdmin = admin;
+        admin = _newAdmin;
+
+        emit AdminChanged(oldAdmin, _newAdmin);
+    }
+
+    /**
+     * @notice View details of a specific proof
+     * @param _id Proof ID
+     * @return Proof struct
+     */
+    function getProof(uint256 _id) external view returns (Proof memory) {
+        require(_id > 0 && _id <= proofCount, "Invalid proof ID");
+        return proofs[_id];
     }
 }
-// 
-update
-// 
